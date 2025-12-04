@@ -428,16 +428,16 @@ impl Stitcher {
     /// - `Error::FileNotFound` if the file doesn't exist
     /// - `Error::UnsupportedFormat` if the format isn't supported
     pub fn add_image<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
-        let path_str = path.as_ref().to_string_lossy();
-        let c_path = CString::new(path_str.as_ref())
-            .map_err(|_| Error::InvalidPath(path_str.into_owned()))?;
+        let path_str = path.as_ref().to_string_lossy().into_owned();
+        let c_path = CString::new(path_str.as_str())
+            .map_err(|_| Error::InvalidPath(path_str.clone()))?;
 
         let err = unsafe { sys::openpano_add_image_file(self.handle, c_path.as_ptr()) };
 
         if err == sys::OpenpanoError::OPENPANO_OK {
             Ok(())
         } else if err == sys::OpenpanoError::OPENPANO_ERROR_FILE_NOT_FOUND {
-            Err(Error::FileNotFound(path_str.into_owned()))
+            Err(Error::FileNotFound(path_str))
         } else {
             Err(err.into())
         }

@@ -44,27 +44,40 @@ fn main() {
         _ => project_root.join("dist/linux/lib"),
     };
     
-    // Check if the library exists
-    let lib_exists = if target_os == "ios" {
-        lib_path.exists()
-    } else {
-        lib_path.join("libopenpano.a").exists() || lib_path.join("openpano.lib").exists()
+    // Try to find the build directory first (has all libraries)
+    let build_path = match target_os.as_str() {
+        "macos" => {
+            let arm64_path = project_root.join("build/macos-arm64");
+            let x64_path = project_root.join("build/macos-x64");
+            if arm64_path.join("libopenpano_all.a").exists() {
+                arm64_path
+            } else if x64_path.join("libopenpano_all.a").exists() {
+                x64_path
+            } else {
+                lib_path.clone()
+            }
+        }
+        _ => lib_path.clone(),
     };
     
-    if lib_exists {
-        println!("cargo:rustc-link-search=native={}", lib_path.display());
-    } else {
-        // Try to find in the build directory
-        let build_path = project_root.join("build");
-        if build_path.exists() {
-            println!("cargo:rustc-link-search=native={}", build_path.display());
-        } else {
-            println!("cargo:warning=OpenPano library not found. Run build-all.sh first.");
-        }
-    }
+    // Check if the combined library exists in build directory
+    let combined_lib_exists = build_path.join("libopenpano_all.a").exists();
     
-    // Link the OpenPano library
-    println!("cargo:rustc-link-lib=static=openpano");
+    if combined_lib_exists {
+        println!("cargo:rustc-link-search=native={}", build_path.display());
+        // Link the combined library that includes everything (OpenPano + FFI + lodepng)
+        println!("cargo:rustc-link-lib=static=openpano_all");
+        // Also link lodepng separately in case it's not fully included
+        if build_path.join("liblodepng.a").exists() {
+            println!("cargo:rustc-link-lib=static=lodepng");
+        }
+    } else if lib_path.join("libopenpano.a").exists() {
+        println!("cargo:rustc-link-search=native={}", lib_path.display());
+        println!("cargo:rustc-link-lib=static=openpano");
+    } else {
+        println!("cargo:warning=OpenPano library not found. Run build-all.sh first.");
+        println!("cargo:rustc-link-lib=static=openpano");
+    }
     
     // Link system dependencies based on platform
     match target_os.as_str() {
@@ -92,8 +105,9 @@ fn main() {
         }
     }
     
-    // Link JPEG if feature is enabled
-    if cfg!(feature = "jpeg") {
+    // Link JPEG library (required for JPEG image loading)
+    // Try pkg-config first, fall back to system library
+    if pkg_config::probe_library("libjpeg").is_err() {
         println!("cargo:rustc-link-lib=jpeg");
     }
     
