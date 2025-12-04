@@ -137,3 +137,6 @@ OpenPano/*.o
 OpenPano/*.a
 
 
+# IDE
+.cursorindexingignore
+.specstory/
