@@ -43,6 +43,35 @@ check_requirements() {
     fi
 }
 
+# Apply patches to submodules (C++17 compatibility fixes for FLANN)
+apply_patches() {
+    local PATCH_DIR="$PROJECT_ROOT/patches"
+    local OPENPANO_DIR="$PROJECT_ROOT/OpenPano"
+    
+    if [ ! -d "$PATCH_DIR" ]; then
+        return 0
+    fi
+    
+    for patch in "$PATCH_DIR"/*.patch; do
+        if [ -f "$patch" ]; then
+            patch_name=$(basename "$patch")
+            
+            # Check if patch is already applied by testing reverse apply
+            if git -C "$OPENPANO_DIR" apply --reverse --check "$patch" 2>/dev/null; then
+                log_info "Patch already applied: $patch_name"
+            else
+                log_step "Applying patch: $patch_name"
+                if git -C "$OPENPANO_DIR" apply --check "$patch" 2>/dev/null; then
+                    git -C "$OPENPANO_DIR" apply "$patch"
+                    log_info "Patch applied successfully: $patch_name"
+                else
+                    log_warn "Patch may have conflicts or is partially applied: $patch_name"
+                fi
+            fi
+        fi
+    done
+}
+
 # Build for macOS (Universal binary: x64 + arm64)
 build_macos() {
     log_info "Building for macOS (Universal binary)..."
@@ -281,6 +310,7 @@ usage() {
 
 # Main
 check_requirements
+apply_patches
 
 case "${1:-all}" in
     macos)

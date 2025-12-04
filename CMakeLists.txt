@@ -77,10 +77,12 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 # CImg compatibility for mobile platforms
-# Disable CImg entirely on iOS/Android - use lodepng only (PNG support)
+# Disable system calls and display on iOS/Android (not available on sandboxed platforms)
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS" OR CMAKE_SYSTEM_NAME STREQUAL "Android")
     add_compile_definitions(
         OPENPANO_MOBILE_PLATFORM=1   # Signals to use lodepng only
+        cimg_no_system_calls         # Disable std::system() - not available on iOS/Android
+        cimg_display=0               # Disable display code - not needed for headless processing
     )
 endif()
 

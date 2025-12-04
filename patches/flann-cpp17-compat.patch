@@ -1,0 +1,101 @@
+diff --git a/src/third-party/flann/algorithms/kdtree_index.h b/src/third-party/flann/algorithms/kdtree_index.h
+index 964db6e..2ba03be 100644
+--- a/src/third-party/flann/algorithms/kdtree_index.h
++++ b/src/third-party/flann/algorithms/kdtree_index.h
+@@ -37,6 +37,7 @@
+ #include <cmath>
+ #include <cstring>
+ #include <stdarg.h>
++#include <random>
+ 
+ #include "flann/general.h"
+ #include "flann/algorithms/nn_index.h"
+@@ -263,9 +264,11 @@ protected:
+ 
+         tree_roots_.resize(trees_);
+         /* Construct the randomized trees. */
++        static std::random_device rd;
++        static std::mt19937 g(rd());
+         for (int i = 0; i < trees_; i++) {
+             /* Randomize the order of vectors to allow for unbiased sampling. */
+-            std::random_shuffle(ind.begin(), ind.end());
++            std::shuffle(ind.begin(), ind.end(), g);
+             tree_roots_[i] = divideTree(&ind[0], int(size_) );
+         }
+         delete[] mean_;
+diff --git a/src/third-party/flann/util/heap.h b/src/third-party/flann/util/heap.h
+index d54a99c..6a6f045 100644
+--- a/src/third-party/flann/util/heap.h
++++ b/src/third-party/flann/util/heap.h
+@@ -105,8 +105,16 @@ public:
+         count = 0;
+     }
+ 
+-    struct CompareT : public std::binary_function<T,T,bool>
++    /**
++     * Comparator struct for heap operations.
++     * Note: std::binary_function was removed in C++17, so we define the types directly.
++     */
++    struct CompareT
+     {
++        typedef T first_argument_type;
++        typedef T second_argument_type;
++        typedef bool result_type;
++
+         bool operator()(const T& t_1, const T& t_2) const
+         {
+             return t_2 < t_1;
+diff --git a/src/third-party/flann/util/lsh_table.h b/src/third-party/flann/util/lsh_table.h
+index 8ed1764..f8410d9 100644
+--- a/src/third-party/flann/util/lsh_table.h
++++ b/src/third-party/flann/util/lsh_table.h
+@@ -39,6 +39,7 @@
+ #include <iostream>
+ #include <iomanip>
+ #include <limits.h>
++#include <random>
+ // TODO as soon as we use C++0x, use the code in USE_UNORDERED_MAP
+ #if USE_UNORDERED_MAP
+ #include <unordered_map>
+@@ -364,7 +365,9 @@ inline LshTable<unsigned char>::LshTable(unsigned int feature_size, unsigned int
+     // A bit brutal but fast to code
+     std::vector<size_t> indices(feature_size * CHAR_BIT);
+     for (size_t i = 0; i < feature_size * CHAR_BIT; ++i) indices[i] = i;
+-    std::random_shuffle(indices.begin(), indices.end());
++    static std::random_device rd;
++    static std::mt19937 g(rd());
++    std::shuffle(indices.begin(), indices.end(), g);
+ 
+     // Generate a random set of order of subsignature_size_ bits
+     for (unsigned int i = 0; i < key_size_; ++i) {
+diff --git a/src/third-party/flann/util/random.h b/src/third-party/flann/util/random.h
+index b7b51b4..0f004aa 100644
+--- a/src/third-party/flann/util/random.h
++++ b/src/third-party/flann/util/random.h
+@@ -35,6 +35,7 @@
+ #include <cstdlib>
+ #include <cstddef>
+ #include <vector>
++#include <random>
+ 
+ #include "flann/general.h"
+ 
+@@ -110,14 +111,15 @@ public:
+      */
+     void init(int n)
+     {
+-        static RandomGenerator generator;
+         // create and initialize an array of size n
+         vals_.resize(n);
+         size_ = n;
+         for (int i = 0; i < size_; ++i) vals_[i] = i;
+ 
+-        // shuffle the elements in the array
+-        std::random_shuffle(vals_.begin(), vals_.end(), generator);
++        // shuffle the elements in the array using modern C++ random
++        static std::random_device rd;
++        static std::mt19937 g(rd());
++        std::shuffle(vals_.begin(), vals_.end(), g);
+ 
+         counter_ = 0;
+     }
