@@ -1,0 +1,53 @@
+diff --git a/src/stitch/imageref.hh b/src/stitch/imageref.hh
+index f97aace..e6c5b58 100644
+--- a/src/stitch/imageref.hh
++++ b/src/stitch/imageref.hh
+@@ -13,9 +13,10 @@ namespace pano {
+ struct ImageRef {
+   std::string fname;
+   Mat32f* img = nullptr;
+-  int _width, _height;
++  mutable int _width, _height;
++  mutable bool dims_cached;
+ 
+-  ImageRef(const std::string& fname): fname(fname) {}
++  ImageRef(const std::string& fname): fname(fname), _width(0), _height(0), dims_cached(false) {}
+   //ImageRef(const ImageRef& ) = delete;  // TODO make it work
+   ~ImageRef() { if (img) delete img; }
+ 
+@@ -24,13 +25,31 @@ struct ImageRef {
+     img = new Mat32f{read_img(fname.c_str())};
+     _width = img->width();
+     _height = img->height();
++    dims_cached = true;
+   }
+ 
+-  void release() { if (img) delete img; img = nullptr; }
++  void release() {
++    if (img) delete img;
++    img = nullptr;
++    // Keep dims_cached true and _width/_height valid even after release
++    // so dimensions remain accessible without reloading
++  }
+ 
+-  int width() const { return _width; }
+-  int height() const { return _height; }
+-  Shape2D shape() const { return {_width, _height}; }
++  int width() const {
++    if (!dims_cached) {
++      const_cast<ImageRef*>(this)->load();
++    }
++    return _width;
++  }
++  
++  int height() const {
++    if (!dims_cached) {
++      const_cast<ImageRef*>(this)->load();
++    }
++    return _height;
++  }
++  
++  Shape2D shape() const { return {width(), height()}; }
+ 
+ };
+ 

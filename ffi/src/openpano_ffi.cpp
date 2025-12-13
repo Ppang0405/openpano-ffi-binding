@@ -173,14 +173,14 @@ OPENPANO_API void openpano_config_default(OpenpanoConfig* config) {
     
     std::memset(config, 0, sizeof(OpenpanoConfig));
     
-    config->mode = OPENPANO_MODE_ESTIMATE_CAMERA;
+    config->mode = OPENPANO_MODE_ESTIMATE_CAMERA;  // = 1 (not 0!)
     config->focal_length = 36.0f;  // 35mm equivalent
     config->ordered_input = 0;     // auto-detect
     config->crop_result = 1;       // enabled
     config->num_threads = 0;       // auto
     config->lazy_read = 0;         // disabled for safety
     config->straighten = 0;        // disabled
-    config->max_output_size = 0;   // no limit
+    config->max_output_size = 8000; // maximum dimension (0 causes division by zero!)
     config->multiband = 1;         // enabled
 }
 
@@ -207,6 +207,38 @@ static void apply_config_to_openpano(const OpenpanoConfig* cfg) {
     config::STRAIGHTEN = (cfg->straighten != 0);
     config::MAX_OUTPUT_SIZE = cfg->max_output_size;
     config::MULTIBAND = cfg->multiband;
+    
+    // Initialize SIFT and feature detection parameters (from config.cfg defaults)
+    config::SIFT_WORKING_SIZE = 800;
+    config::NUM_OCTAVE = 4;
+    config::NUM_SCALE = 7;
+    config::SCALE_FACTOR = 1.4142135623f;
+    config::GAUSS_SIGMA = 1.4142135623f;
+    config::GAUSS_WINDOW_FACTOR = 6;
+    config::CONTRAST_THRES = 4e-2f;
+    config::JUDGE_EXTREMA_DIFF_THRES = 2e-3f;
+    config::EDGE_RATIO = 6.0f;
+    config::PRE_COLOR_THRES = 5e-2f;
+    config::CALC_OFFSET_DEPTH = 4;
+    config::OFFSET_THRES = 0.5f;
+    
+    // Descriptor and matching parameters
+    config::ORI_RADIUS = 4.5f;
+    config::ORI_HIST_SMOOTH_COUNT = 2;
+    config::DESC_HIST_SCALE_FACTOR = 3;
+    config::DESC_INT_FACTOR = 512;
+    config::MATCH_REJECT_NEXT_RATIO = 0.8f;
+    
+    // RANSAC parameters
+    config::RANSAC_ITERATIONS = 1500;
+    config::RANSAC_INLIER_THRES = 3.5;
+    config::INLIER_IN_MATCH_RATIO = 0.1f;
+    config::INLIER_IN_POINTS_RATIO = 0.04f;
+    
+    // Optimization parameters
+    config::SLOPE_PLAIN = 8e-3f;
+    config::LM_LAMBDA = 5.0f;
+    config::MULTIPASS_BA = 1;
     
     openpano_log(OPENPANO_LOG_DEBUG, "Config applied: mode=%d, focal=%.1f, ordered=%d",
                  cfg->mode, cfg->focal_length, cfg->ordered_input);
